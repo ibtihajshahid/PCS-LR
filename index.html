@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCS-LR | Tactical Long Range Secure Node v3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070c0e;
+    --panel: #0d161b;
+    --border: #1b2a32;
+    --border-focus: #00d084;
+    --primary: #00d084;
+    --primary-dim: rgba(0, 208, 132, 0.15);
+    --warn: #ffb020;
+    --error: #ff4d4d;
+    --text: #c8d6df;
+    --muted: #6b7f8a;
+  }
+
+  * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); padding-bottom: 30px; }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #090f12;
+  }
+  header h1 { font-family: 'JetBrains Mono', monospace; font-size: 14px; margin: 0; letter-spacing: 1.2px; }
+  .status-dot {
+    width: 8px; height: 8px; background: var(--primary); border-radius: 50%;
+    display: inline-block; box-shadow: 0 0 10px var(--primary);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+  .grid { display: grid; grid-template-columns: 350px 1fr 350px; gap: 16px; padding: 16px; max-width: 1600px; margin: 0 auto; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; }
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px; display: flex; justify-content: space-between;
+  }
+
+  .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+  .metric span:last-child { font-family: 'JetBrains Mono', monospace; color: white; }
+
+  .control-group { margin-bottom: 12px; }
+  .control-group label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .control-group label span { font-family: 'JetBrains Mono', monospace; color: var(--primary); }
+
+  select, input[type="range"] {
+    width: 100%; background: #070c0e; border: 1px solid var(--border);
+    color: white; border-radius: 4px; padding: 6px; outline: none;
+  }
+  select:focus { border-color: var(--primary); }
+
+  textarea {
+    width: 100%; background: #070c0e; border: 1px solid var(--border); color: white;
+    border-radius: 6px; padding: 10px; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; resize: none; outline: none; transition: border 0.2s;
+  }
+  textarea:focus { border-color: var(--primary); }
+
+  .byte-bar-container { background: #070c0e; border: 1px solid var(--border); height: 6px; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+  .byte-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.2s, background-color 0.2s; }
+  .byte-bar.warning { background: var(--warn); }
+  .byte-bar.danger { background: var(--error); }
+
+  /* Map/Network Topology Simulation Visuals */
+  .topo-container {
+    background: #05090b; border: 1px dashed var(--border); border-radius: 6px;
+    padding: 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; position: relative;
+  }
+  .node-unit { text-align: center; z-index: 2; width: 80px; }
+  .node-unit div { font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-top: 4px; }
+  .node-icon {
+    width: 36px; height: 36px; border-radius: 6px; background: #13222a;
+    border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto; color: white; font-weight: bold; font-size: 11px;
+  }
+  .node-unit.active .node-icon { border-color: var(--primary); background: var(--primary-dim); color: var(--primary); }
+
+  .hop-line {
+    position: absolute;
+    top: 38px;
+    height: 2px;
+    background: var(--border);
+    z-index: 1;
+    transition: background 0.3s;
+  }
+
+  .hop-line.active {
+    background: linear-gradient(90deg, var(--primary) 0%, var(--border) 100%);
+    background-size: 200% 100%; animation: activeLine 1.5s linear infinite;
+  }
+  @keyframes activeLine { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+  #hop-line1 { left: 85px; width: calc(50% - 85px); }
+  #hop-line2 { left: 50%; width: calc(50% - 85px); }
+
+  .btn {
+    width: 100%; margin-top: 8px; background: var(--primary); color: #001a0f;
+    border: none; padding: 12px; border-radius: 6px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.5px; text-transform: uppercase; font-size: 12px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:active:not(:disabled) { opacity: 0.8; }
+
+  .log {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6;
+    background: #040709; border-radius: 6px; padding: 12px; flex-grow: 1; height: 380px; overflow:auto; white-space: pre-wrap; border: 1px solid var(--border);
+  }
+  .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #1e2d35; color: var(--muted); border: 1px solid var(--border); }
+
+  @media(max-width:1100px){ .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PCS-LR HQ / NODE-KARACHI-01 <span class="badge">FIRMWARE v3.0-SECURE</span></h1>
+  <div style="font-size:12px"><span class="status-dot"></span> SECURE-LINK: AES-256-GCM / 2-HOP RELAY</div>
+  <img src="pcsimage.jpeg" style="height:32px; margin-right:10px">
+</header>
+
+<div class="grid">
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <div class="panel">
+      <div class="panel-title">Radio Dynamic Hardware Config</div>
+
+      <div class="control-group">
+        <label>TX Hardware Power: <span id="lbl-tx">20 dBm</span></label>
+        <input type="range" id="cfg-tx" min="2" max="20" value="20" oninput="updateMetrics()">
+      </div>
+
+      <div class="control-group">
+        <label>Spreading Factor: <span id="lbl-sf">SF12</span></label>
+        <input type="range" id="cfg-sf" min="7" max="12" value="12" oninput="updateMetrics()">
+      </div>
+
+      <div class="control-group">
+        <label>Bandwidth Selector</label>
+        <select id="cfg-bw" onchange="updateMetrics()">
+          <option value="125">125 kHz (Longest Range / Heavy Noise)</option>
+          <option value="250">250 kHz (Medium Range / Balanced)</option>
+          <option value="500">500 kHz (Short Range / Fast Stream)</option>
+        </select>
+      </div>
+
+      <div class="panel-title" style="margin-top:10px; margin-bottom:10px;">Link Telemetry Calculations</div>
+      <div class="metric"><span>Estimated Range</span><span id="tel-range">~30.4 KM</span></div>
+      <div class="metric"><span>Packet Airtime</span><span id="tel-airtime">925 ms</span></div>
+      <div class="metric"><span>SNR Threshold</span><span id="tel-snr">-20.0 dB</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Secure Payload Composer</div>
+      <label style="font-size:11px; color:var(--muted); display:flex; justify-content:space-between;">
+        <span>PLAINTEXT PAYLOAD</span>
+        <span id="byte-counter">0 / 64 Bytes</span>
+      </label>
+      <textarea id="pt" rows="3" maxlength="64" oninput="validateBytes()">FALCON-1 TO SHAHEEN-2: GRID 24.8607,67.0011 - POSITION SECURE - OVER</textarea>
+      <div class="byte-bar-container"><div id="byte-bar" class="byte-bar"></div></div>
+
+      <label style="font-size:11px; color:var(--muted); margin-top:12px; display:block">PRE-SHARED KEY (256-BIT PSK BUFFER)</label>
+      <textarea id="psk" rows="1" style="height:34px; margin-top:4px;">PAK-786-SECURE-CLUSTER-KEY-2026</textarea>
+
+      <button class="btn" id="txBtn" onclick="handleTransmit()">Encrypt & Initiate Burst</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Live Hardware Link / Radio Frequency Field Trace</div>
+
+    <div class="topo-container">
+      <div id="hop-line1" class="hop-line"></div>
+      <div id="hop-line2" class="hop-line"></div>
+
+      <div class="node-unit active" id="node-base">
+        <div class="node-icon">TX</div>
+        <div>KHI-01</div>
+      </div>
+      <div class="node-unit" id="node-relay">
+        <div class="node-icon">RLY</div>
+        <div>MID-HOP</div>
+      </div>
+      <div class="node-unit" id="node-dest">
+        <div class="node-icon">RX</div>
+        <div>SHN-02</div>
+      </div>
+    </div>
+
+    <div class="panel-title">RF Uplink Spectrum Monitor / Console</div>
+    <div class="log" id="log">> system: hardware initialization secure...
+> lora: sx1276 onboarded, RF frequency set to 433.175 MHz
+> crypto: hardware accelerated AES-256 pipeline connected
+> gps: satellite lock acquired -> 24.8607° N, 67.0011° E
+> status: pipeline safe. waiting for payload transaction...
+</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">End-To-End Rx Decryption Gateway</div>
+
+    <div class="control-group">
+      <label>Intercepted Hex IV</label>
+      <textarea id="rx-iv" rows="2" readonly style="background:#05090b; color:var(--warn);" placeholder="Waiting for active frame transmission..."></textarea>
+    </div>
+
+    <div class="control-group">
+      <label>Encrypted Ciphertext Block (Base64)</label>
+      <textarea id="rx-cipher" rows="3" readonly style="background:#05090b; color:var(--warn);" placeholder="No encrypted data packets over the air..."></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+  function updateMetrics() {
+    const tx = Number(document.getElementById('cfg-tx').value);
+    const sf = Number(document.getElementById('cfg-sf').value);
+    const bw = Number(document.getElementById('cfg-bw').value);
+
+    const rangeKm = (tx * 1.45 + (13 - sf) * 2.4 + bw / 35).toFixed(1);
+    const airtime = Math.round((sf / 7) * (bw / 125) * 160 + 65);
+    const snr = (Math.round(((-18 + tx * 0.7 - (sf - 7) * 1.8 + bw / 80) * 10)) / 10).toFixed(1);
+
+    document.getElementById('lbl-tx').textContent = `${tx} dBm`;
+    document.getElementById('lbl-sf').textContent = `SF${sf}`;
+    document.getElementById('tel-range').textContent = `~${rangeKm} KM`;
+    document.getElementById('tel-airtime').textContent = `${airtime} ms`;
+    document.getElementById('tel-snr').textContent = `${snr} dB`;
+  }
+
+  function validateBytes() {
+    const input = document.getElementById('pt');
+    const counter = document.getElementById('byte-counter');
+    const bar = document.getElementById('byte-bar');
+
+    if (input.value.length > 64) {
+      input.value = input.value.slice(0, 64);
+    }
+
+    const length = input.value.length;
+    const max = 64;
+    const percent = Math.min((length / max) * 100, 100);
+
+    counter.textContent = `${length} / ${max} Bytes`;
+    bar.style.width = `${percent}%`;
+    bar.classList.toggle('warning', length > 48);
+    bar.classList.toggle('danger', length > 56);
+  }
+
+  function appendLog(message) {
+    const log = document.getElementById('log');
+    const line = `> ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })} ${message}`;
+    log.textContent += `\n${line}`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function handleTransmit() {
+    const payload = document.getElementById('pt').value.trim();
+    const psk = document.getElementById('psk').value.trim();
+    const button = document.getElementById('txBtn');
+    const iv = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16).toUpperCase()).join('');
+    const ciphertext = btoa(`${payload}::${psk}::${iv}`).slice(0, 180);
+
+    document.getElementById('node-relay').classList.add('active');
+    document.getElementById('hop-line1').classList.add('active');
+    document.getElementById('hop-line2').classList.add('active');
+    document.getElementById('node-dest').classList.add('active');
+
+    document.getElementById('rx-iv').value = iv;
+    document.getElementById('rx-cipher').value = ciphertext;
+
+    appendLog('tx: secure burst initiated -> payload encrypted and forwarded');
+    appendLog(`relay: hop-1 integrity verified using PSK buffer length ${psk.length} bytes`);
+    appendLog(`gateway: IV ${iv} accepted / ciphertext block received over relay chain`);
+
+    button.disabled = true;
+    setTimeout(() => {
+      button.disabled = false;
+      appendLog('status: transmission cycle complete. awaiting next payload');
+    }, 1800);
+  }
+
+  window.updateMetrics = updateMetrics;
+  window.validateBytes = validateBytes;
+  window.handleTransmit = handleTransmit;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const pt = document.getElementById('pt');
+    pt.value = pt.value.slice(0, 64);
+    updateMetrics();
+    validateBytes();
+  });
+</script>
+</body>
+</html>
